@@ -43,7 +43,9 @@
     "PLP": {
       "poolDiamond": "0xE7D96684A56e60ffBAAe0fC0683879da48daB383",
       "oracle": "0xF4F7123fFe42c4C90A4bCDD2317D397E0B7d7cc0",
+      "mevAegis": "",
       "orderbook": "0x6a0f77D9eE49FfA3164CF87CeD9eE1a1f5278C4D",
+      "marketOrderbook": "",
       "facets": {
         "admin": "0x0FdE910552977041Dc8c7ef652b5a07B40B9e006",
         "accessControl": "0xfA0B82bE3C88F22cCf35cdEa66c6e5f9C4De8799",

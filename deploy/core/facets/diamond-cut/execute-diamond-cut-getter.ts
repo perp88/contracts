@@ -33,8 +33,6 @@ const facetCuts = [
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const deployer = (await ethers.getSigners())[0];
 
-  ethers.provider;
-
   const poolDiamond = DiamondCutFacet__factory.connect(
     config.Pools.PLP.poolDiamond,
     deployer

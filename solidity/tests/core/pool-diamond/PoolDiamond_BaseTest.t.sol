@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.17;
 
-import { BaseTest, EsP88, MockWNative, WFeedableRewarder, FeedableRewarder, PLPStaking, console, stdError, MockStrategy, MockDonateVault, PLP, MockFlashLoanBorrower, LibPoolConfigV1, PoolOracle, PoolRouter, OwnershipFacetInterface, GetterFacetInterface, LiquidityFacetInterface, PerpTradeFacetInterface, AdminFacetInterface, FarmFacetInterface, AccessControlFacetInterface, LibAccessControl, FundingRateFacetInterface, Orderbook } from "../../base/BaseTest.sol";
+import { BaseTest, EsP88, MockWNative, WFeedableRewarder, FeedableRewarder, PLPStaking, console, stdError, MockStrategy, MockDonateVault, PLP, MockFlashLoanBorrower, LibPoolConfigV1, PoolOracle, PoolRouter, OwnershipFacetInterface, GetterFacetInterface, LiquidityFacetInterface, PerpTradeFacetInterface, AdminFacetInterface, FarmFacetInterface, AccessControlFacetInterface, LibAccessControl, FundingRateFacetInterface, Orderbook, MEVAegis, MarketOrderbook } from "../../base/BaseTest.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -27,6 +27,7 @@ abstract contract PoolDiamond_BaseTest is BaseTest {
   FundingRateFacetInterface internal poolFundingRateFacet;
 
   Orderbook internal orderbook;
+  MarketOrderbook internal marketOrderbook;
 
   function setUp() public virtual {
     esP88 = BaseTest.deployEsP88();
@@ -107,6 +108,14 @@ abstract contract PoolDiamond_BaseTest is BaseTest {
       1 ether
     );
     poolAdminFacet.setPlugin(address(orderbook), true);
+    marketOrderbook = deployMarketOrderbook(
+      poolDiamond,
+      address(poolOracle),
+      address(matic),
+      1 ether,
+      0.01 ether
+    );
+    poolAdminFacet.setPlugin(address(marketOrderbook), true);
   }
 
   function checkPoolBalanceWithState(address token, int256 offset) internal {
@@ -119,5 +128,17 @@ abstract contract PoolDiamond_BaseTest is BaseTest {
           offset
       )
     );
+  }
+
+  function getPriceBits(
+    uint256 wbtcPrice,
+    uint256 wethPrice,
+    uint256 maticPrice
+  ) internal pure returns (uint256) {
+    uint256 priceBits = 0;
+    priceBits = priceBits | (wbtcPrice << (0 * 32));
+    priceBits = priceBits | (wethPrice << (1 * 32));
+    priceBits = priceBits | (maticPrice << (2 * 32));
+    return priceBits;
   }
 }

@@ -220,8 +220,19 @@
     "deploy:tenderly:staking:set-reward-distributor-params": "npx hardhat --network tenderly deploy --no-compile --reset --tags SetRewardDistributorParams",
     "deploy:matic:staking:upgrade-reward-distributor": "npx hardhat --network matic deploy --no-compile --reset --tags UpgradeRewardDistributor",
     "deploy:matic:staking:upgrade-feeder-rewarder": "npx hardhat --network matic deploy --no-compile --reset --tags UpgradeFeedableRewarder",
+    "deploy:matic:oracle:upgrade-pool-oracle": "npx hardhat --network matic deploy --no-compile --reset --tags UpgradePoolOracle",
+    "deploy:matic:oracle:deploy-mev-aegis": "npx hardhat --network matic deploy --no-compile --reset --tags MEVAegis",
+    "deploy:matic:oracle:set-configs-mev-aegis": "npx hardhat --network matic deploy --no-compile --reset --tags SetConfigsMEVAegis",
+    "deploy:matic:oracle:init-mev-aegis": "npx hardhat --network matic deploy --no-compile --reset --tags InitMEVAegis",
+    "deploy:matic:oracle:set-secondary-price-feed": "npx hardhat --network matic deploy --no-compile --reset --tags SetSecondaryPriceFeed",
+    "deploy:matic:oracle:enable-secondary-price-feed": "npx hardhat --network matic deploy --no-compile --reset --tags EnableSecondaryPriceFeed",
+    "deploy:matic:pool:market-orderbook": "npx hardhat --network matic deploy --no-compile --reset --tags MarketOrderbook",
+    "deploy:matic:pool:set-delay-values": "npx hardhat --network matic deploy --no-compile --reset --tags SetDelayValues",
+    "deploy:matic:pool:set-admin-market-orderbook": "npx hardhat --network matic deploy --no-compile --reset --tags SetAdminMarketOrderbook",
+    "deploy:matic:pool:set-position-keeper": "npx hardhat --network matic deploy --no-compile --reset --tags SetPositionKeeper",
     "deploy:matic:admin:set-tax-bps": "npx hardhat --network matic deploy --no-compile --reset --tags SetTaxBps",
-    "deploy:matic:admin:set-mint-burn-fee-bps": "npx hardhat --network matic deploy --no-compile --reset --tags SetMintBurnFeeBps"
+    "deploy:matic:admin:set-mint-burn-fee-bps": "npx hardhat --network matic deploy --no-compile --reset --tags SetMintBurnFeeBps",
+    "deploy:matic:execute-diamond-cut": "npx hardhat --network matic deploy --no-compile --reset --tags ExecuteDiamondCut"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-etherscan": "^3.1.2",

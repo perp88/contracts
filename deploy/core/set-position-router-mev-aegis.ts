@@ -1,35 +1,26 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { ethers } from "hardhat";
-import {
-  AdminFacetInterface__factory,
-  Orderbook__factory,
-} from "../../typechain";
+import { MEVAegis__factory, PoolOracle__factory } from "../../typechain";
 import { getConfig } from "../utils/config";
 import { eip1559rapidGas } from "../utils/gas";
 
 const config = getConfig();
 
-const WHITELIST_ADDRESS = config.Pools.PLP.mevAegis;
-
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const deployer = (await ethers.getSigners())[0];
-  const orderbook = Orderbook__factory.connect(
-    config.Pools.PLP.orderbook,
+  const mevAegis = MEVAegis__factory.connect(
+    config.Pools.PLP.mevAegis,
     deployer
   );
 
-  console.log(`> Set Orderbook's whitelist...`);
-  const tx = await orderbook.setWhitelist(
-    WHITELIST_ADDRESS,
-    true,
-    await eip1559rapidGas()
-  );
+  console.log("> Set Position Router for MEVAegis");
+  const tx = await mevAegis.setPositionRouter(config.Pools.PLP.marketOrderbook);
   console.log(`> ⛓ Tx submitted: ${tx.hash}`);
   console.log(`> Waiting for tx to be mined...`);
   await tx.wait(3);
-  console.log(`> ✅ Tx mined!`);
+  console.log(`> ✅ Done`);
 };
 
 export default func;
-func.tags = ["SetWhitelistOrderbook"];
+func.tags = ["SetPositionRouterMEVAegis"];

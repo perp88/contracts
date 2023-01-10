@@ -4,6 +4,7 @@ pragma solidity 0.8.17;
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { ChainlinkPriceFeedInterface } from "../interfaces/ChainLinkPriceFeedInterface.sol";
+import { ISecondaryPriceFeed } from "../interfaces/ISecondaryPriceFeed.sol";
 
 contract PoolOracle is OwnableUpgradeable {
   using SafeCast for int256;
@@ -25,6 +26,8 @@ contract PoolOracle is OwnableUpgradeable {
   mapping(address => PriceFeedInfo) public priceFeedInfo;
   uint80 public roundDepth;
   uint256 public maxStrictPriceDeviation;
+  address public secondaryPriceFeed;
+  bool public isSecondaryPriceEnabled;
 
   event SetMaxStrictPriceDeviation(
     uint256 prevMaxStrictPriceDeviation,
@@ -36,15 +39,67 @@ contract PoolOracle is OwnableUpgradeable {
     PriceFeedInfo newPriceFeedInfo
   );
   event SetRoundDepth(uint80 prevRoundDepth, uint80 newRoundDepth);
+  event SetSecondaryPriceFeed(
+    address oldSecondaryPriceFeed,
+    address newSecondaryPriceFeed
+  );
+  event SetIsSecondaryPriceEnabled(bool oldFlag, bool newFlag);
 
   function initialize(uint80 _roundDepth) external initializer {
     OwnableUpgradeable.__Ownable_init();
 
     if (_roundDepth < 2) revert PoolOracle_BadArguments();
     roundDepth = _roundDepth;
+    isSecondaryPriceEnabled = false;
+  }
+
+  function setSecondaryPriceFeed(address newPriceFeed) external onlyOwner {
+    emit SetSecondaryPriceFeed(secondaryPriceFeed, newPriceFeed);
+    secondaryPriceFeed = newPriceFeed;
+  }
+
+  function setIsSecondaryPriceEnabled(bool flag) external onlyOwner {
+    emit SetIsSecondaryPriceEnabled(isSecondaryPriceEnabled, flag);
+    isSecondaryPriceEnabled = flag;
   }
 
   function _getPrice(
+    address token,
+    bool isUseMaxPrice
+  ) internal view returns (uint256) {
+    uint256 price = _getPrimaryPrice(token, isUseMaxPrice);
+
+    if (isSecondaryPriceEnabled) {
+      price = getSecondaryPrice(token, price, isUseMaxPrice);
+    }
+
+    // Handle strict stable price deviation.
+    // SLOAD
+    PriceFeedInfo memory priceFeed = priceFeedInfo[token];
+    if (address(priceFeed.priceFeed) == address(0))
+      revert PoolOracle_PriceFeedNotAvailable();
+    if (priceFeed.isStrictStable) {
+      uint256 delta;
+      unchecked {
+        delta = price > ONE_USD ? price - ONE_USD : ONE_USD - price;
+      }
+
+      if (delta <= maxStrictPriceDeviation) return ONE_USD;
+
+      if (isUseMaxPrice && price > ONE_USD) return price;
+
+      if (!isUseMaxPrice && price < ONE_USD) return price;
+
+      return ONE_USD;
+    }
+
+    // Handle spreadBasisPoint
+    if (isUseMaxPrice) return (price * (BPS + priceFeed.spreadBps)) / BPS;
+
+    return (price * (BPS - priceFeed.spreadBps)) / BPS;
+  }
+
+  function _getPrimaryPrice(
     address token,
     bool isUseMaxPrice
   ) internal view returns (uint256) {
@@ -89,28 +144,38 @@ contract PoolOracle is OwnableUpgradeable {
 
     if (price == 0) revert PoolOracle_UnableFetchPrice();
 
-    price = (price * PRICE_PRECISION) / 10 ** priceFeed.decimals;
+    return (price * PRICE_PRECISION) / 10 ** priceFeed.decimals;
+  }
 
-    // Handle strict stable price deviation.
-    if (priceFeed.isStrictStable) {
-      uint256 delta;
-      unchecked {
-        delta = price > ONE_USD ? price - ONE_USD : ONE_USD - price;
-      }
-
-      if (delta <= maxStrictPriceDeviation) return ONE_USD;
-
-      if (isUseMaxPrice && price > ONE_USD) return price;
-
-      if (!isUseMaxPrice && price < ONE_USD) return price;
-
-      return ONE_USD;
+  function getSecondaryPrice(
+    address _token,
+    uint256 _referencePrice,
+    bool _maximise
+  ) public view returns (uint256) {
+    if (secondaryPriceFeed == address(0)) {
+      return _referencePrice;
     }
+    return
+      ISecondaryPriceFeed(secondaryPriceFeed).getPrice(
+        _token,
+        _referencePrice,
+        _maximise
+      );
+  }
 
-    // Handle spreadBasisPoint
-    if (isUseMaxPrice) return (price * (BPS + priceFeed.spreadBps)) / BPS;
+  function getLatestPrimaryPrice(
+    address token
+  ) external view returns (uint256) {
+    // SLOAD
+    PriceFeedInfo memory priceFeed = priceFeedInfo[token];
+    if (address(priceFeed.priceFeed) == address(0))
+      revert PoolOracle_PriceFeedNotAvailable();
 
-    return (price * (BPS - priceFeed.spreadBps)) / BPS;
+    (, int256 price, , , ) = priceFeed.priceFeed.latestRoundData();
+
+    if (price == 0) revert PoolOracle_UnableFetchPrice();
+
+    return uint256(price);
   }
 
   function getPrice(

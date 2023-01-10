@@ -8,21 +8,28 @@ const config = getConfig();
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const deployer = (await ethers.getSigners())[0];
-  const Orderbook = await ethers.getContractFactory("Orderbook", deployer);
+  const Orderbook = await ethers.getContractFactory(
+    "MarketOrderbook",
+    deployer
+  );
   const newOrderbookImp = await upgrades.prepareUpgrade(
-    config.Pools.PLP.orderbook,
+    config.Pools.PLP.marketOrderbook,
     Orderbook
   );
-  console.log(`> New Orderbook Implementation address: ${newOrderbookImp}`);
-  const tx = await upgrades.upgradeProxy(config.Pools.PLP.orderbook, Orderbook);
+  console.log(
+    `> New MarketOrderbook Implementation address: ${newOrderbookImp}`
+  );
+  const tx = await upgrades.upgradeProxy(
+    config.Pools.PLP.marketOrderbook,
+    Orderbook
+  );
   await tx.deployed();
-  console.log(`Upgrade successful!`);
 
   await tenderly.verify({
     address: newOrderbookImp.toString(),
-    name: "Orderbook",
+    name: "MarketOrderbook",
   });
 };
 
 export default func;
-func.tags = ["UpgradeOrderbook"];
+func.tags = ["UpgradeMarketOrderbook"];

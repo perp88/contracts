@@ -965,6 +965,14 @@ contract GetterFacet is GetterFacetInterface {
       (10 ** LibPoolConfigV1.getTokenDecimalsOf(token));
   }
 
+  function convertUsde30ToTokens(
+    address token,
+    uint256 amountUsd,
+    bool isUseMaxPrice
+  ) external view returns (uint256) {
+    return LibPoolV1.convertUsde30ToTokens(token, amountUsd, isUseMaxPrice);
+  }
+
   function accumFundingRateLong(
     address indexToken
   ) external view returns (int256) {

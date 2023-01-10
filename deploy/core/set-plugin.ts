@@ -7,7 +7,7 @@ import { eip1559rapidGas } from "../utils/gas";
 
 const config = getConfig();
 
-const plugin = config.Pools.PLP.orderbook;
+const plugin = config.Pools.PLP.marketOrderbook;
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const deployer = (await ethers.getSigners())[0];

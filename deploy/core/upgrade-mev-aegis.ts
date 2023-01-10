@@ -8,21 +8,20 @@ const config = getConfig();
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const deployer = (await ethers.getSigners())[0];
-  const Orderbook = await ethers.getContractFactory("Orderbook", deployer);
-  const newOrderbookImp = await upgrades.prepareUpgrade(
-    config.Pools.PLP.orderbook,
-    Orderbook
+  const MEVAegis = await ethers.getContractFactory("MEVAegis", deployer);
+  const newMEVAegisImp = await upgrades.prepareUpgrade(
+    config.Pools.PLP.mevAegis,
+    MEVAegis
   );
-  console.log(`> New Orderbook Implementation address: ${newOrderbookImp}`);
-  const tx = await upgrades.upgradeProxy(config.Pools.PLP.orderbook, Orderbook);
+  console.log(`> New MEVAegis Implementation address: ${newMEVAegisImp}`);
+  const tx = await upgrades.upgradeProxy(config.Pools.PLP.mevAegis, MEVAegis);
   await tx.deployed();
-  console.log(`Upgrade successful!`);
 
   await tenderly.verify({
-    address: newOrderbookImp.toString(),
-    name: "Orderbook",
+    address: newMEVAegisImp.toString(),
+    name: "MEVAegis",
   });
 };
 
 export default func;
-func.tags = ["UpgradeOrderbook"];
+func.tags = ["UpgradeMEVAegis"];

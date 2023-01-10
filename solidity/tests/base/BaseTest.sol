@@ -31,7 +31,7 @@ import { WFeedableRewarder } from "solidity/contracts/staking/WFeedableRewarder.
 import { RewardDistributor } from "solidity/contracts/staking/RewardDistributor.sol";
 import { Compounder } from "solidity/contracts/staking/Compounder.sol";
 import { Vester } from "solidity/contracts/vesting/Vester.sol";
-import { ProxyAdmin } from "../interfaces/ProxyAdmin.sol";
+import { ProxyAdmin } from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import { Lockdrop } from "solidity/contracts/lockdrop/Lockdrop.sol";
 import { LockdropGateway } from "solidity/contracts/lockdrop/LockdropGateway.sol";
 import { LockdropConfig } from "solidity/contracts/lockdrop/LockdropConfig.sol";
@@ -65,6 +65,8 @@ import { PoolRouter } from "solidity/contracts/core/pool-diamond/PoolRouter.sol"
 import { Orderbook } from "solidity/contracts/core/pool-diamond/Orderbook.sol";
 import { MockWNative } from "../mocks/MockWNative.sol";
 import { MerkleAirdrop } from "solidity/contracts/airdrop/MerkleAirdrop.sol";
+import { MEVAegis } from "solidity/contracts/core/MEVAegis.sol";
+import { MarketOrderbook } from "solidity/contracts/core/pool-diamond/MarketOrderbook.sol";
 
 // solhint-disable const-name-snakecase
 // solhint-disable no-inline-assembly
@@ -134,18 +136,7 @@ contract BaseTest is DSTest {
     daiPriceFeed = deployMockChainlinkPriceFeed();
     usdcPriceFeed = deployMockChainlinkPriceFeed();
 
-    proxyAdmin = _setupProxyAdmin();
-  }
-
-  function _setupProxyAdmin() internal returns (ProxyAdmin) {
-    bytes memory _bytecode = abi.encodePacked(
-      vm.getCode("./out/ProxyAdmin.sol/ProxyAdmin.json")
-    );
-    address _address;
-    assembly {
-      _address := create(0, add(_bytecode, 0x20), mload(_bytecode))
-    }
-    return ProxyAdmin(address(_address));
+    proxyAdmin = new ProxyAdmin();
   }
 
   function buildDefaultSetPriceFeedInput()
@@ -369,7 +360,7 @@ contract BaseTest is DSTest {
   ) internal returns (GetterFacet, bytes4[] memory) {
     GetterFacet getterFacet = new GetterFacet();
 
-    bytes4[] memory selectors = new bytes4[](65);
+    bytes4[] memory selectors = new bytes4[](66);
     selectors[0] = GetterFacet.getAddLiquidityFeeBps.selector;
     selectors[1] = GetterFacet.getRemoveLiquidityFeeBps.selector;
     selectors[2] = GetterFacet.getSwapFeeBps.selector;
@@ -433,10 +424,11 @@ contract BaseTest is DSTest {
     selectors[60] = GetterFacet.getFundingFeeAccounting.selector;
     selectors[61] = GetterFacet.convertTokensToUsde30.selector;
     selectors[62] = GetterFacet.getFundingFee.selector;
-    selectors[63] = GetterFacet
+    selectors[63] = GetterFacet.convertUsde30ToTokens.selector;
+    selectors[64] = GetterFacet
       .getNextShortAveragePriceWithRealizedPnl
       .selector;
-    selectors[64] = GetterFacet.getDeltaWithoutFundingFee.selector;
+    selectors[65] = GetterFacet.getDeltaWithoutFundingFee.selector;
 
     DiamondCutInterface.FacetCut[] memory facetCuts = buildFacetCut(
       address(getterFacet),
@@ -1087,5 +1079,57 @@ contract BaseTest is DSTest {
     address feeder
   ) internal returns (MerkleAirdrop) {
     return new MerkleAirdrop(token, feeder);
+  }
+
+  function deployMEVAegis(
+    uint256 _priceDuration,
+    uint256 _maxPriceUpdateDelay,
+    uint256 _minBlockInterval,
+    uint256 _maxDeviationBasisPoints,
+    address _tokenManager,
+    address _positionRouter,
+    address _orderbook
+  ) internal returns (MEVAegis) {
+    bytes memory _logicBytecode = abi.encodePacked(
+      vm.getCode("./out/MEVAegis.sol/MEVAegis.json")
+    );
+    bytes memory _initializer = abi.encodeWithSelector(
+      bytes4(
+        keccak256(
+          "initialize(uint256,uint256,uint256,uint256,address,address,address)"
+        )
+      ),
+      _priceDuration,
+      _maxPriceUpdateDelay,
+      _minBlockInterval,
+      _maxDeviationBasisPoints,
+      _tokenManager,
+      _positionRouter,
+      _orderbook
+    );
+    address _proxy = _setupUpgradeable(_logicBytecode, _initializer);
+    return MEVAegis(payable(_proxy));
+  }
+
+  function deployMarketOrderbook(
+    address _pool,
+    address _poolOracle,
+    address _weth,
+    uint256 _depositFee,
+    uint256 _minExecutionFee
+  ) internal returns (MarketOrderbook) {
+    bytes memory _logicBytecode = abi.encodePacked(
+      vm.getCode("./out/MarketOrderbook.sol/MarketOrderbook.json")
+    );
+    bytes memory _initializer = abi.encodeWithSelector(
+      bytes4(keccak256("initialize(address,address,address,uint256,uint256)")),
+      _pool,
+      _poolOracle,
+      _weth,
+      _depositFee,
+      _minExecutionFee
+    );
+    address _proxy = _setupUpgradeable(_logicBytecode, _initializer);
+    return MarketOrderbook(payable(_proxy));
   }
 }

@@ -3,25 +3,25 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { ethers } from "hardhat";
 import {
   AdminFacetInterface__factory,
-  Orderbook__factory,
+  MarketOrderbook__factory,
 } from "../../typechain";
 import { getConfig } from "../utils/config";
 import { eip1559rapidGas } from "../utils/gas";
 
 const config = getConfig();
 
-const WHITELIST_ADDRESS = config.Pools.PLP.mevAegis;
+const KEEPER = config.Pools.PLP.mevAegis;
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const deployer = (await ethers.getSigners())[0];
-  const orderbook = Orderbook__factory.connect(
-    config.Pools.PLP.orderbook,
+  const orderbook = MarketOrderbook__factory.connect(
+    config.Pools.PLP.marketOrderbook,
     deployer
   );
 
-  console.log(`> Set Orderbook's whitelist...`);
-  const tx = await orderbook.setWhitelist(
-    WHITELIST_ADDRESS,
+  console.log(`> Set Position Keeper...`);
+  const tx = await orderbook.setPositionKeeper(
+    KEEPER,
     true,
     await eip1559rapidGas()
   );
@@ -32,4 +32,4 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 export default func;
-func.tags = ["SetWhitelistOrderbook"];
+func.tags = ["SetPositionKeeper"];
